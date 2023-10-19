@@ -1,35 +1,50 @@
 import requests
 from bs4 import BeautifulSoup
+import csv
 
-url="https://www.amazon.in/s?k=bags&crid=2M096C61O4MLT&qid=1653308124&sprefix=ba%2Caps%2C283&ref=sr_pg_1"
-header={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9"}
-r=requests.get(url, headers=header)
-soup=BeautifulSoup(r.content, 'html.parser')
-bags_div= soup.find_all('div', class_='a-section a-spacing-small a-spacing-top-small')
-print(r)
-description_list=''
-link='https://amazon.in/'
-for i in bags_div:
-    product_url= soup.find('a', class_='a-link-normal s-no-outline')
-    final_url=link+(product_url.get('href'))
-    name=soup.find('span', class_='a-size-medium a-color-base a-text-normal')
-    product_name=name.text
-    price=soup.find('span', class_='a-price-whole')
-    product_price=price.text
-    ratings=soup.find('span', class_='a-icon-alt')
-    total_ratings=ratings.text
-    reviews=soup.find('span', class_='a-size-base s-underline-text')
-    total_reviews=reviews.text()
-    requests.get(final_url)
-    description=soup.find('ul', class_='a-unordered-list a-vertical a-spacing-mini')
-    for i in description:
-        description_list+=soup.find('span', class_='a-list-item')+'\n'
+url = "https://www.amazon.in/s?k=bags&crid=2IB2ZH4QDP4I9&sprefix=bags%2Caps%2C4132&ref=nb_sb_noss_1"
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+}
 
-# https://www.amazon.in/Uppercase-Professional-Backpack-Resistant-Sustainable/dp/B0BWNBQXDZ/ref=sr_1_11_sspa?crid=2M096C61O4MLT&keywords=bags&qid=1697613761&sprefix=ba%2Caps%2C283&sr=8-11-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9tdGY&psc=1
-# sspa/click?ie=UTF8&spc=MTo2MTE1MTMzMDkxOTM2NTU6MTY5NzYxMzc2MTpzcF9tdGY6MjAxMjU4OTk5MjA2OTg6OjA6Og&url=%2FUppercase-Professional-Backpack-Resistant-Sustainable%2Fdp%2FB0BWNBQXDZ%2Fref%3Dsr_1_11_sspa%3Fcrid%3D2M096C61O4MLT%26keywords%3Dbags%26qid%3D1697613761%26sprefix%3Dba%252Caps%252C283%26sr%3D8-11-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9tdGY%26psc%3D1
+response = requests.get(url, headers=headers)
+response = requests.get(url)
 
-#creating csv(comma seperated value) file
-'''var7=pd.DataFrame({'one':[1,2,3,4,5], 'two':[4,5,6,7,8], 'three':[3,4,5,6,7]})
-print(var7)
-#var7=var7.dropna(subset=['product_name'])
-var7.to_csv('test_file.csv', index=False, header=['o','t','th'])'''
+if response.status_code == 200:
+    soup = BeautifulSoup(response.text, 'html.parser')
+    product_details = soup.find_all('div', {'data-asin': True})
+
+    with open('amazon_products.csv', 'w', newline='') as csvfile:
+        fieldnames = ['Product name', 'Product price', 'Product rating', 'Product review' 'Product URL']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+    for product in product_details:
+        name = product.find('span', {'class': 'a-text-normal'})
+        product_name = name.get_text() if name else "Not Found"
+
+        price = product.find('span', {'class': 'a-price-whole'})
+        product_price = price.get_text() if price else "Not Found"
+
+        rating = product.find('span', {'class': 'a-icon-alt'})
+        product_rating = rating.get_text() if rating else "Not Found"
+
+        reviews=soup.find('span', {'class': 'a-size-base s-underline-text'})
+        product_reviews=reviews.get_text() if reviews else "Not Found"
+
+        url = product.find('a', {'class': 'a-link-normal'})
+        product_url = f"https://www.amazon.in{url['href']}" if url else ""
+        
+        print("Product_URL:", product_url)
+        print("Product_name:", product_name)
+        print("Product_price:", product_price)
+        print("Product_rating:", product_rating)
+        print("Product_reviews:", product_reviews)
+        
+        print("\n")
+
+        if product_name and product_price and product_rating and product_url:
+            writer.writerow({'Product name': product_name, 'Product price': product_price, 'Product rating': product_rating, 'Product review': product_reviews, 'Product URL': product_url})
+
+else:
+    print("Failed to retrieve the page. Status code:", response.status_code)
